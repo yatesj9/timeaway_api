@@ -1,4 +1,5 @@
 use actix_web::{web::Json, HttpResponse};
+use bson::oid::ObjectId;
 use futures::TryStreamExt;
 use log::info;
 use mongodb::{bson::doc, Client, Collection};
@@ -6,8 +7,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+enum ReqOptions {
+    Vacation,
+    Banked,
+    Other,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Request {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
     name: String,
+    email: String,
+    start_date: String,
+    end_date: String,
+    start_time: String,
+    end_time: String,
+    option: ReqOptions,
 }
 
 #[derive(Debug)]
@@ -32,10 +48,31 @@ impl MongoRepo {
         }
     }
 
+    pub async fn get_request(&self, id: String) -> HttpResponse{
+
+        let object_id = match ObjectId::parse_str(&id) {
+            Ok(id) => id,
+            Err(_) => {
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+            }
+        };
+        info!("Object id -> {}", object_id);
+
+        let filter = doc! {"_id": object_id};
+
+        match self.request_col.find_one(filter).await {
+            Ok(Some(record)) => HttpResponse::Ok().json(record),
+            Ok(None) => {
+                info!("Id requested -> {:?} Not found", &id);
+                HttpResponse::NotFound().json(json!({"Record Not Found": id}))
+            },
+            Err(err) => HttpResponse::InternalServerError().json(json!({"Error":err.to_string()}))
+        }
+    }
+
     pub async fn get_all_requests(&self) -> HttpResponse {
         let mut cursor = self.request_col.find(doc! {}).await.expect("Error getting");
 
-        info!("called");
         let mut requests: Vec<Request> = Vec::new();
 
         while let Some(request) = cursor.try_next().await.expect("Error") {
