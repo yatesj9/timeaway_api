@@ -1,5 +1,6 @@
+use actix_web::web;
 use actix_web::web::{Data, Json, Path};
-use actix_web::{get, middleware::Logger, post, App, HttpResponse, HttpServer};
+use actix_web::{delete, get, middleware::Logger, patch, post, App, HttpResponse, HttpServer};
 
 use crate::mongo::db::MongoRepo;
 
@@ -14,6 +15,8 @@ pub async fn init_actix() -> mongodb::error::Result<()> {
             .service(allrequests)
             .service(singlerequest)
             .service(insertrequest)
+            .service(updaterequest)
+            .service(deleterequest)
     })
     .bind(("127.0.0.1", 8085))?
     .run()
@@ -43,3 +46,17 @@ async fn insertrequest(
     db.insert_request(request).await
 }
 
+#[patch("/api/requests/{id}")]
+async fn updaterequest(
+    db: Data<MongoRepo>,
+    path: Path<String>,
+    new_request: web::Json<crate::mongo::db::Request>,
+) -> HttpResponse {
+    db.update_request(path.into_inner(), new_request).await
+}
+
+// DELETE/Delete request by ID
+#[delete("/api/requests/{id}")]
+async fn deleterequest(db: Data<MongoRepo>, path: Path<String>) -> HttpResponse {
+    db.delete_request(path.into_inner()).await
+}

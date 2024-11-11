@@ -1,3 +1,4 @@
+use actix_web::web;
 use actix_web::{web::Json, HttpResponse};
 use bson::oid::ObjectId;
 use futures::TryStreamExt;
@@ -48,8 +49,7 @@ impl MongoRepo {
         }
     }
 
-    pub async fn get_request(&self, id: String) -> HttpResponse{
-
+    pub async fn get_request(&self, id: String) -> HttpResponse {
         let object_id = match ObjectId::parse_str(&id) {
             Ok(id) => id,
             Err(_) => {
@@ -65,8 +65,8 @@ impl MongoRepo {
             Ok(None) => {
                 info!("Id requested -> {:?} Not found", &id);
                 HttpResponse::NotFound().json(json!({"Record Not Found": id}))
-            },
-            Err(err) => HttpResponse::InternalServerError().json(json!({"Error":err.to_string()}))
+            }
+            Err(err) => HttpResponse::InternalServerError().json(json!({"Error":err.to_string()})),
         }
     }
 
@@ -91,6 +91,77 @@ impl MongoRepo {
             Ok(some) => {
                 info!("Request {:?} data => {:?}", some, &new_request);
                 HttpResponse::Ok().json(json!({"Record Inserted":some}))
+            }
+            Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
+        }
+    }
+
+    pub async fn update_request(
+        &self,
+        id: String,
+        new_request: web::Json<Request>,
+    ) -> HttpResponse {
+        let object_id = match ObjectId::parse_str(&id) {
+            Ok(id) => id,
+            Err(_) => {
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+            }
+        };
+
+        info!("Object id -> {}", object_id);
+
+        let filter = doc! {"_id": object_id};
+        info!("Filter -> {:?}", filter);
+
+        let updated_request = doc! {
+            "$set":
+            {
+                "name": new_request.name.clone(),
+                "email": new_request.email.clone(),
+                "start_date": new_request.start_date.clone(),
+                "end_date": new_request.end_date.clone(),
+                "start_time": new_request.start_date.clone(),
+                "end_time": new_request.end_date.clone(),
+                "option": format!("{:?}", new_request.option),
+            }
+        };
+
+        match self.request_col.update_one(filter, updated_request).await {
+            Ok(result) => {
+                if result.modified_count > 0 {
+                    // Successfully updated the document
+                    HttpResponse::Ok().json(json!({"status": "success", "message": "Request updated successfully"}))
+                } else {
+                    // Document not found or no fields were updated
+                    HttpResponse::NotFound().json(json!({"status": "error", "message": "Request not found or no changes applied"}))
+                }
+            },
+            Err(err) => {
+                // Handle any errors that occurred during the update
+                info!("Error updating request: {}", err);
+                HttpResponse::InternalServerError().json(json!({"status": "error", "message": "Internal server error"}))
+            }
+        }
+    }
+
+    pub async fn delete_request(&self, id: String) -> HttpResponse {
+        let object_id = match ObjectId::parse_str(&id) {
+            Ok(id) => id,
+            Err(_) => {
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+            }
+        };
+        info!("Object id -> {}", object_id);
+
+        let filter = doc! {"_id": object_id};
+        let result = self.request_col.delete_one(filter.clone()).await;
+
+        info!("Record {:?} deleted? -> {:?}", filter, result);
+
+        match result {
+            Ok(msg) => {
+                info!("Record deleted for {:?}", &id);
+                HttpResponse::Ok().json(msg)
             }
             Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
         }
