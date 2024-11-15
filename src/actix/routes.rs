@@ -1,6 +1,7 @@
 use actix_web::web;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, middleware::Logger, patch, post, App, HttpResponse, HttpServer};
+use crate::mongo::models;
 
 use crate::mongo::db::MongoRepo;
 
@@ -41,16 +42,17 @@ pub async fn singlerequest(db: Data<MongoRepo>, path: Path<String>) -> HttpRespo
 #[post("/api/requests")]
 async fn insertrequest(
     db: Data<MongoRepo>,
-    request: Json<crate::mongo::db::Request>,
+    request: Json<models::Request>,
 ) -> HttpResponse {
     db.insert_request(request).await
 }
 
+// Patch/Update a request via JSON body
 #[patch("/api/requests/{id}")]
 async fn updaterequest(
     db: Data<MongoRepo>,
     path: Path<String>,
-    new_request: web::Json<crate::mongo::db::Request>,
+    new_request: web::Json<models::UpdateRequest>,
 ) -> HttpResponse {
     db.update_request(path.into_inner(), new_request).await
 }
