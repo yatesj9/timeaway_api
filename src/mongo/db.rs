@@ -1,12 +1,12 @@
-use dotenv::dotenv;
-use std::env;
 use actix_web::web;
 use actix_web::{web::Json, HttpResponse};
 use bson::oid::ObjectId;
+use dotenv::dotenv;
 use futures::TryStreamExt;
 use log::info;
 use mongodb::{bson::doc, Client, Collection};
 use serde_json::json;
+use std::env;
 
 use crate::mongo::models;
 
@@ -18,11 +18,13 @@ pub struct MongoRepo {
 impl MongoRepo {
     pub async fn init_db() -> Self {
         dotenv().ok();
+        dotenv::dotenv().expect("Failed to load .env file");
 
         // MongoDB URL, DB & Collection
         let uri = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let db_name = env::var("DATABASE_NAME").expect("DATABASE_NAME must be set");
-        let db_collection = env::var("DATABASE_COLLECTION").expect("DATABASE_COLLECTION must be set");
+        let db_collection =
+            env::var("DATABASE_COLLECTION").expect("DATABASE_COLLECTION must be set");
 
         // Create a new client and connect to the server
         let client = Client::with_uri_str(uri).await.expect("error");
@@ -44,6 +46,7 @@ impl MongoRepo {
             }
         };
         info!("Object id -> {}", object_id);
+        info!("Object created at -> {}", object_id.timestamp());
 
         let filter = doc! {"_id": object_id};
 
@@ -123,9 +126,9 @@ impl MongoRepo {
 
         Self::insert_if_some(&mut update_doc, "name", new_request.name.clone());
         Self::insert_if_some(&mut update_doc, "email", new_request.email.clone());
-        Self::insert_if_some(&mut update_doc, "start_date", new_request.start_date.clone(),);
+        Self::insert_if_some(&mut update_doc, "start_date", new_request.start_date.clone());
         Self::insert_if_some(&mut update_doc, "end_date", new_request.end_date.clone());
-        Self::insert_if_some(&mut update_doc, "start_time", new_request.start_time.clone(),);
+        Self::insert_if_some(&mut update_doc, "start_time", new_request.start_time.clone());
         Self::insert_if_some(&mut update_doc, "end_time", new_request.end_time.clone());
         Self::insert_if_some(&mut update_doc, "manager", new_request.manager.clone());
 

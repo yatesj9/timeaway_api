@@ -10,6 +10,8 @@ An api for submitting vacation requests.
 	- serde
 	- log
 	- log4rs
+	- bson
+	- dotenv
 
 ### Folder structure
 
@@ -20,6 +22,7 @@ An api for submitting vacation requests.
 			- mod.rs
 		- mongo
 			- db.rs
+			- models.rs
 			- mod.rs
 	- main.rs
 - Cargo.toml
@@ -27,7 +30,7 @@ An api for submitting vacation requests.
 - log4rs.yaml
 - .env
 	
-### Data
+### Data DB and collection
 
 - timeaway
 	- requests
@@ -37,6 +40,9 @@ An api for submitting vacation requests.
 An .env file is used for configuration details, the file goes in the root of the application.
 
 ```
+# Actix server port
+ACTIX_PORT=#### - NOTE: 8080 used if not defined
+
 # Database connection
 DATABASE_URL=mongodb://**THE MONGODB URL**/
 
@@ -49,9 +55,13 @@ DATABASE_COLLECTION=**THE COLLECTION NAME**
 
 ## Request Struct
 
-TODO
-
-
+```
+GET 	"/api/requests"
+GET 	"/api/requests/{id}"
+POST 	"/api/requests"
+PATCH   "/api/requests/{id}"
+DELETE  "/api/requests/{id}"
+```
 
 ```
 cargo watch -x run

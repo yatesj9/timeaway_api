@@ -1,11 +1,21 @@
+use crate::mongo::models;
 use actix_web::web;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, middleware::Logger, patch, post, App, HttpResponse, HttpServer};
-use crate::mongo::models;
+use dotenv::dotenv;
+use std::env;
 
 use crate::mongo::db::MongoRepo;
 
 pub async fn init_actix() -> mongodb::error::Result<()> {
+    dotenv().ok();
+    dotenv::dotenv().expect("Failed to load .env file");
+
+    let port: u16 = env::var("ACTIX_PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse()
+        .expect("ACTIX_PORT must be a valid integer");
+
     let db = MongoRepo::init_db().await;
     let db_data = Data::new(db);
 
@@ -19,7 +29,7 @@ pub async fn init_actix() -> mongodb::error::Result<()> {
             .service(updaterequest)
             .service(deleterequest)
     })
-    .bind(("127.0.0.1", 8085))?
+    .bind(("127.0.0.1", port))?
     .run()
     .await?;
 
@@ -40,10 +50,7 @@ pub async fn singlerequest(db: Data<MongoRepo>, path: Path<String>) -> HttpRespo
 
 // POST/Insert request via JSON body
 #[post("/api/requests")]
-async fn insertrequest(
-    db: Data<MongoRepo>,
-    request: Json<models::Request>,
-) -> HttpResponse {
+async fn insertrequest(db: Data<MongoRepo>, request: Json<models::Request>) -> HttpResponse {
     db.insert_request(request).await
 }
 

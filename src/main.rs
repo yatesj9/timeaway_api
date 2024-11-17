@@ -6,12 +6,18 @@ use crate::actix::routes;
 // Logging
 use log::{error, info};
 use log4rs::{self};
+use std::process;
 
 #[tokio::main]
 async fn main() -> mongodb::error::Result<()> {
     // Enable the log4rs logging
-    log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
-    info!("Initializing Logging...");
+    match log4rs::init_file("log4rs.yaml", Default::default()) {
+        Ok(_) => info!("Logger initialized successfully"),
+        Err(e) => {
+            println!("Failed to initialize logger: {}", e);
+            process::exit(1)
+        }
+    };
 
     // Initialize Actix
     info!("Initializing Actix...");
