@@ -21,11 +21,11 @@ pub enum ReqStatus {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Request {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-    id: Option<ObjectId>,
+    pub id: Option<ObjectId>,
     name: String,
     email: String,
     start_date: String,
-    end_date: String,
+    pub end_date: String,
     start_time: String,
     end_time: String,
     charge_against: ReqCharge,

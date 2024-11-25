@@ -1,12 +1,14 @@
 use actix_web::web;
 use actix_web::{web::Json, HttpResponse};
 use bson::oid::ObjectId;
+use chrono::{NaiveDate, Utc};
 use dotenv::dotenv;
 use futures::TryStreamExt;
 use log::info;
 use mongodb::{bson::doc, Client, Collection};
 use serde_json::json;
-use std::env;
+use std::{env, sync::Arc};
+use tokio::sync::Mutex;
 
 use crate::mongo::models;
 
@@ -16,7 +18,7 @@ pub struct MongoRepo {
 }
 
 impl MongoRepo {
-    pub async fn init_db() -> Self {
+    pub async fn init_db() -> Arc<Mutex<Self>> {
         dotenv().ok();
         dotenv::dotenv().expect("Failed to load .env file");
 
@@ -33,8 +35,55 @@ impl MongoRepo {
         // Create collections using struct for specified database and collection name
         let request_collection: Collection<models::Request> = db.collection(&db_collection);
 
-        MongoRepo {
+        // MongoRepo {
+        //     request_col: request_collection,
+        // }
+        Arc::new(Mutex::new(MongoRepo {
             request_col: request_collection,
+        }))
+    }
+
+    pub async fn check_and_update_request(&self) {
+        info!("Checked");
+        let today = Utc::now().date_naive();
+
+        let mut cursor = self
+            .request_col
+            .find(doc! {"status":"Processed"})
+            .await
+            .expect("Error getting processed requests");
+
+        let mut requests: Vec<models::Request> = Vec::new();
+
+        while let Some(request) = cursor.try_next().await.expect("Error") {
+            requests.push(request)
+        }
+
+        for request in requests {
+            // Assuming 'request._id' is the identifier for the request
+            let stored_date = NaiveDate::parse_from_str(&request.end_date, "%m/%d/%Y").unwrap();
+
+            if today > stored_date {
+                let update_result = self
+                    .request_col
+                    .update_one(
+                        doc! { "_id": request.id },                 // Filter to match the request
+                        doc! { "$set": { "status": "Completed" } }, // Update operation
+                    )
+                    .await;
+                match update_result {
+                    Ok(_) => info!(
+                        "Updated request with ID {:?} to status 'Completed'",
+                        request.id
+                    ),
+                    Err(e) => eprintln!("Failed to update request with ID {:?}: {}", request.id, e),
+                }
+            } else {
+                info!(
+                    "Request with ID {:?} has not yet reached the end date.",
+                    request.id
+                );
+            }
         }
     }
 
@@ -126,9 +175,17 @@ impl MongoRepo {
 
         Self::insert_if_some(&mut update_doc, "name", new_request.name.clone());
         Self::insert_if_some(&mut update_doc, "email", new_request.email.clone());
-        Self::insert_if_some(&mut update_doc, "start_date", new_request.start_date.clone());
+        Self::insert_if_some(
+            &mut update_doc,
+            "start_date",
+            new_request.start_date.clone(),
+        );
         Self::insert_if_some(&mut update_doc, "end_date", new_request.end_date.clone());
-        Self::insert_if_some(&mut update_doc, "start_time", new_request.start_time.clone());
+        Self::insert_if_some(
+            &mut update_doc,
+            "start_time",
+            new_request.start_time.clone(),
+        );
         Self::insert_if_some(&mut update_doc, "end_time", new_request.end_time.clone());
         Self::insert_if_some(&mut update_doc, "manager", new_request.manager.clone());
 

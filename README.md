@@ -1,6 +1,6 @@
 # TimeAway API
 
-An api for submitting vacation requests.
+An api for submitting vacation requests, request start as Pending once submitted, get approved than processed. A task executes everyday at midnight checking the end_date, if it's older than the current day it will change the status to Completed.
 
 ### Dependencies
 
@@ -24,6 +24,7 @@ An api for submitting vacation requests.
 			- db.rs
 			- models.rs
 			- mod.rs
+			- tasks.rs
 	- main.rs
 - Cargo.toml
 - Readme.md

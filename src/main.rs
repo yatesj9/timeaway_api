@@ -2,6 +2,8 @@ mod actix;
 mod mongo;
 
 use crate::actix::routes;
+use crate::mongo::db::MongoRepo;
+use crate::mongo::tasks::periodic_task;
 
 // Logging
 use log::{error, info};
@@ -19,9 +21,17 @@ async fn main() -> mongodb::error::Result<()> {
         }
     };
 
+    // Initialize DB
+    info!("Initializing DB...");
+    let db = MongoRepo::init_db().await;
+
+    // Spawn task to change processed to completed
+    info!("Starting Tasks...");
+    tokio::spawn(periodic_task(db.clone()));
+
     // Initialize Actix
     info!("Initializing Actix...");
-    let actix_init = routes::init_actix().await;
+    let actix_init = routes::init_actix(db.clone()).await;
     match actix_init {
         Ok(init) => init,
         Err(err) => error!("Actix inialization error -> {}", err),
@@ -29,3 +39,5 @@ async fn main() -> mongodb::error::Result<()> {
 
     Ok(())
 }
+
+
