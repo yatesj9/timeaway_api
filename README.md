@@ -59,6 +59,7 @@ DATABASE_COLLECTION=**THE COLLECTION NAME**
 ```
 GET 	"/api/requests"
 GET 	"/api/requests/{id}"
+GET     "/api/rquests/?status=########&limit=##
 POST 	"/api/requests"
 PATCH   "/api/requests/{id}"
 DELETE  "/api/requests/{id}"

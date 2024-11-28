@@ -109,6 +109,27 @@ impl MongoRepo {
         }
     }
 
+    pub async fn get_request_status(&self, status: String, limit: i32) -> HttpResponse {
+        let filter = doc! {"status": status.clone()};
+
+        let mut cursor = self
+            .request_col
+            .find(filter)
+            .limit(limit.into())
+            .await
+            .expect("Error getting");
+
+        let mut requests: Vec<models::Request> = Vec::new();
+
+        while let Some(request) = cursor.try_next().await.expect("Error") {
+            requests.push(request)
+        }
+        {
+            info!("ALL Requests with Status {:?} & Limit {:?} -> {:?}", status, limit, &requests);
+            HttpResponse::Ok().json(requests)
+        }
+    }
+
     pub async fn get_all_requests(&self) -> HttpResponse {
         let mut cursor = self.request_col.find(doc! {}).await.expect("Error getting");
 

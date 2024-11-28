@@ -2,8 +2,12 @@ use crate::mongo::models;
 use actix_cors::Cors;
 use actix_web::web;
 use actix_web::web::{Data, Json, Path};
-use actix_web::{delete, get, middleware::Logger, patch, post,http, App, HttpResponse, HttpServer};
+use actix_web::{
+    delete, get, http, middleware::Logger, patch, post, App, HttpResponse, HttpServer,
+};
 use dotenv::dotenv;
+use log::info;
+use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -39,6 +43,7 @@ pub async fn init_actix(db: Arc<Mutex<MongoRepo>>) -> mongodb::error::Result<()>
             .service(insertrequest)
             .service(updaterequest)
             .service(deleterequest)
+            .service(requestparams)
     })
     .bind(("127.0.0.1", port))?
     .run()
@@ -47,6 +52,21 @@ pub async fn init_actix(db: Arc<Mutex<MongoRepo>>) -> mongodb::error::Result<()>
     Ok(())
 }
 
+#[derive(Debug, Deserialize)]
+struct GetParams {
+    status: String,
+    limit: i32,
+}
+
+// GET/Return with /?status=#######&limit=##
+#[get("/api/requests/")]
+pub async fn requestparams(
+    db: web::Data<Arc<Mutex<MongoRepo>>>,
+    info: web::Query<GetParams>,
+) -> HttpResponse {
+    let db = db.lock().await;
+    db.get_request_status(info.status.clone(), info.limit).await
+}
 
 // GET/Return all requests
 #[get("/api/requests")]
@@ -57,14 +77,20 @@ pub async fn allrequests(db: web::Data<Arc<Mutex<MongoRepo>>>) -> HttpResponse {
 
 // GET/Return single request by ID
 #[get("/api/requests/{id}")]
-pub async fn singlerequest(db: web::Data<Arc<Mutex<MongoRepo>>>, path: Path<String>) -> HttpResponse {
+pub async fn singlerequest(
+    db: web::Data<Arc<Mutex<MongoRepo>>>,
+    path: Path<String>,
+) -> HttpResponse {
     let db = db.lock().await;
     db.get_request(path.into_inner()).await
 }
 
 // POST/Insert request via JSON body
 #[post("/api/requests")]
-async fn insertrequest(db: web::Data<Arc<Mutex<MongoRepo>>>, request: Json<models::Request>) -> HttpResponse {
+async fn insertrequest(
+    db: web::Data<Arc<Mutex<MongoRepo>>>,
+    request: Json<models::Request>,
+) -> HttpResponse {
     let db = db.lock().await;
     db.insert_request(request).await
 }
