@@ -1,11 +1,14 @@
 use actix_web::web;
-use actix_web::{web::Json, HttpResponse};
-use bson::oid::ObjectId;
+use actix_web::{HttpResponse, web::Json};
+// use bson::oid::ObjectId;
 use chrono::{NaiveDate, Utc};
 use dotenv::dotenv;
 use futures::TryStreamExt;
 use log::info;
-use mongodb::{bson::doc, Client, Collection};
+use mongodb::{
+    Client, Collection,
+    bson::{doc, oid::ObjectId, Document},
+};
 use serde_json::json;
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
@@ -91,7 +94,7 @@ impl MongoRepo {
         let object_id = match ObjectId::parse_str(&id) {
             Ok(id) => id,
             Err(_) => {
-                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}));
             }
         };
         info!("Object id -> {}", object_id);
@@ -125,7 +128,10 @@ impl MongoRepo {
             requests.push(request)
         }
         {
-            info!("ALL Requests with Status {:?} & Limit {:?} -> {:?}", status, limit, &requests);
+            info!(
+                "ALL Requests with Status {:?} & Limit {:?} -> {:?}",
+                status, limit, &requests
+            );
             HttpResponse::Ok().json(requests)
         }
     }
@@ -156,7 +162,7 @@ impl MongoRepo {
         }
     }
 
-    fn insert_if_some<T>(doc: &mut bson::Document, key: &str, value: Option<T>)
+    fn insert_if_some<T>(doc: &mut Document, key: &str, value: Option<T>)
     where
         T: Into<mongodb::bson::Bson>,
     {
@@ -173,7 +179,7 @@ impl MongoRepo {
         let object_id = match ObjectId::parse_str(&id) {
             Ok(id) => id,
             Err(_) => {
-                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}));
             }
         };
 
@@ -239,7 +245,7 @@ impl MongoRepo {
         let object_id = match ObjectId::parse_str(&id) {
             Ok(id) => id,
             Err(_) => {
-                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}))
+                return HttpResponse::BadRequest().json(json!({"error": "Invalid ID format"}));
             }
         };
         info!("Object id -> {}", object_id);

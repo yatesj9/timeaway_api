@@ -6,7 +6,7 @@ use actix_web::{
     delete, get, http, middleware::Logger, patch, post, App, HttpResponse, HttpServer,
 };
 use dotenv::dotenv;
-use log::info;
+// use log::info;
 use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
